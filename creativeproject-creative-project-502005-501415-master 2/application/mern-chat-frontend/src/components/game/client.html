@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script> -->
+    <!-- <script src="http://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script> -->
+    <script src="data/collisions.js"></script>
+    <script src="data/battlezone.js"></script>
+
+    <!-- <title>Document</title>  --> 
+
+    <style>
+        body{
+            background-color: #50a7e8;
+        }
+    </style>
+</head>
+<body>
+    <div style = "display: inline-block;position:relative">
+        <div style = "background-color: black; position: absolute; top: 0;bottom:0; left: 0; right:0;opacity:0; pointer-events: none;">
+
+        </div>
+        <canvas width="1024" height="576"></canvas>
+    </div>
+
+    <script>
+        
+        const canvas = document.querySelector('canvas')
+        const context = canvas.getContext('2d')
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const collisionsMap = []
+        for (let i = 0; i < collisions.length; i += 70){
+            collisionsMap.push(collisions.slice(i, i + 70))
+        }
+
+        const battleZonesMap = []
+        for (let i = 0; i < battleZonesData.length; i += 70){
+            battleZonesMap.push(battleZonesData.slice(i, i + 70))
+        }
+
+        class Bounds{
+            static width = 64
+            static height = 64
+            constructor({position}) {
+                this.position = position
+                this.width = 64
+                this.height = 64
+            }
+
+            draw(){
+                context.fillStyle = 'rgba(255,0,0,0.5)'
+                context.fillRect(this.position.x, this.position.y, this.width, this.height)
+            }
+        }
+
+        const boundaries = []
+        const offset = {
+            x: -650,
+            y: -550
+        }
+        collisionsMap.forEach((row,i) => {
+            row.forEach((symbol,j) => {
+                if (symbol === 113){
+                    boundaries.push(
+                    new Bounds({
+                        position: {
+                            x : j * Bounds.width + offset.x,
+                            y : i * Bounds.height + offset.y
+                    }}))
+                }
+                
+            })
+        })
+
+        const battleZones = []
+        battleZonesMap.forEach((row,i) => {
+            row.forEach((symbol,j) => {
+                if (symbol === 91){
+                    battleZones.push(
+                    new Bounds({
+                        position: {
+                            x : j * Bounds.width + offset.x,
+                            y : i * Bounds.height + offset.y
+                    }}))
+                }
+                
+            })
+        })
+
+        // Append sprites to Image array
+        function appendImages(array, direction)
+        {
+            for (let i = 0; i < 7; i++)
+            {
+                let path = 'images/Guy/' + direction + '/Guy_' + direction + '_' + i + '.png'
+                let image = new Image()
+                image.src = path
+                array.push(image)
+            }
+        }
+
+        // Load background and player images
+        const playerDownImage = []
+        const playerUpImage = []
+        const playerLeftImage = []
+        const playerRightImage = []
+        appendImages(playerDownImage, 'Down')
+        appendImages(playerUpImage, 'Up')
+        appendImages(playerLeftImage, 'Left')
+        appendImages(playerRightImage, 'Right')
+
+        const playerImage = new Image()
+        playerImage.src = playerDownImage[0].src
+        const image = new Image()
+        image.src = 'images/Areas/Starting_Area/Starting_Area_Map.png'
+        
+        const keys = {
+            w: {
+                pressed: false
+            },
+            a: {
+                pressed: false
+            },
+            s: {
+                pressed: false
+            },
+            d: {
+                pressed: false
+            }
+        }
+        
+        class Sprite{
+            constructor({position,velocity, image}){
+                this.position = position
+                this.image = image
+                this.frames = frames
+                this.image.onload = () => {
+                    this.width = this.image.width
+                    this.height = this.image.height
+                    
+                }
+            }
+
+            draw(){
+                context.drawImage(
+                    this.image,
+                    0,
+                    0,
+                    this.image.width,
+                    this.image.height,
+                    this.position.x,
+                    this.position.y,
+                    this.image.width,
+                    this.image.height
+                )
+            }
+        }
+
+        const player = new Sprite({
+            position:{
+                x: 400,
+                y: 300
+            },
+            image: playerImage,
+        })
+        
+        const background = new Sprite({
+            position:{
+                x: offset.x,
+                y: offset.y
+            },
+            image: image
+        })
+
+        const movables = [background, ...boundaries, ...battleZones]
+        function rectangleCollision({rectangle1, rectangle2}){
+            return(
+                rectangle1.position.x + rectangle1.width >= rectangle2.position.x &&
+                rectangle1.position.x <= rectangle2.position.x + rectangle2.width &&
+                rectangle1.position.y <= rectangle2.position.y + rectangle2.height &&
+                rectangle1.position.y + rectangle1.height >= rectangle2.position.y
+            )
+        }
+
+        let f = 0
+        let gameFrame = 0
+        let moving = true
+        let lastKey = ''
+
+        function updateGameState()
+        {
+            if (gameFrame % 5 == 0)
+                {
+                    if (f < 5)
+                    {
+                        f++
+                    }
+                    else
+                    {
+                        f = 0
+                    }
+                }
+                gameFrame++
+        }
+
+        function animateWalk()
+        {
+            if (!keys.w.pressed && !keys.a.pressed && !keys.s.pressed && !keys.d.pressed)
+            {
+                // Animate player as idle
+                if (lastKey === 'w')
+                {
+                    playerImage.src = playerUpImage[0].src
+                }
+                else if (lastKey === 'a')
+                {
+                    playerImage.src = playerLeftImage[0].src
+                }
+                else if (lastKey === 's')
+                {
+                    playerImage.src = playerDownImage[0].src
+                }
+                else if (lastKey === 'd')
+                {
+                    playerImage.src = playerRightImage[0].src
+                }
+
+                f = 0
+                gameFrame = 0
+            }
+            else if (keys.w.pressed && lastKey === 'w')
+            {
+                playerImage.src = playerUpImage[f].src
+                updateGameState()
+            }
+            else if (keys.a.pressed && lastKey === 'a')
+            {
+                playerImage.src = playerLeftImage[f].src
+                updateGameState()
+            }
+            else if (keys.s.pressed && lastKey === 's')
+            {
+                playerImage.src = playerDownImage[f].src
+                updateGameState()
+            }
+            else if (keys.d.pressed && lastKey === 'd')
+            {
+                playerImage.src = playerRightImage[f].src
+                updateGameState()
+            }
+            window.requestAnimationFrame(animateWalk)
+        }
+        animateWalk()
+
+        function animate(){
+            window.requestAnimationFrame(animate)
+            background.draw()
+            boundaries.forEach((boundary) =>
+            {
+                boundary.draw()
+                
+            })
+
+            battleZones.forEach((battleZone) => {
+                battleZone.draw()
+            }) 
+
+
+            player.draw()
+
+            if (keys.w.pressed || keys.a.pressed || keys.s.pressed || keys.d.pressed){
+                for (let i = 0; i < battleZones.length; i++){
+                    const battleZone = battleZones[i]
+
+                    //calculate whether the player is in the battlezone area
+                    const overlappingLength = Math.min(player.position.x + player.width,battleZone.position.x + battleZone.width) - 
+                    Math.max(player.position.x, battleZone.position.x)
+                    const overlappingWidth = Math.min(player.position.y + player.height, 
+                    battleZone.position.y+battleZone.height)- Math.max(player.position.y, battleZone.position.y)
+                    const overlappingArea = overlappingLength * overlappingWidth 
+                     
+                    if (rectangleCollision({
+                        rectangle1:player, 
+                        rectangle2: battleZone
+                    }) && overlappingArea > (player.width * player.height) / 2 && Math.random() < 0.025)
+                    {
+                        console.log("battlezone")
+                        break
+                    }
+                }
+            }
+            moving = true
+            if (keys.w.pressed && lastKey === 'w')
+            {
+                for (let i = 0; i < boundaries.length; i++){
+                    const boundary = boundaries[i]
+                    if (rectangleCollision({
+                        rectangle1:player, 
+                        rectangle2: {
+                            ...boundary,
+                            position: {
+                                x : boundary.position.x,
+                                y: boundary.position.y + 2
+                            }
+                        }
+                    }))
+                    {
+                        moving = false
+                        break
+                    }
+                }
+                
+                if (moving)
+                {
+                    movables.forEach(movable => 
+                    {
+                        movable.position.y += 3
+                    })
+                }
+                
+            }
+            else if (keys.s.pressed && lastKey === 's')
+            {
+                for (let i = 0; i < boundaries.length; i++){
+                    const boundary = boundaries[i]
+                    if (rectangleCollision({
+                        rectangle1:player, 
+                        rectangle2: {
+                            ...boundary,
+                            position: {
+                                x : boundary.position.x,
+                                y: boundary.position.y - 2
+                            }
+                        }
+                    }))
+                    {
+                        moving = false
+                        break
+                    }
+                }
+                if (moving)
+                {
+                    movables.forEach(movable => 
+                    {
+                    movable.position.y -= 3
+                    })
+                } 
+            }
+            else if (keys.a.pressed && lastKey === 'a')
+            {
+                for (let i = 0; i < boundaries.length; i++){
+                    const boundary = boundaries[i]
+                    if (rectangleCollision({
+                        rectangle1:player, 
+                        rectangle2: {
+                            ...boundary,
+                            position: {
+                                x : boundary.position.x + 2,
+                                y: boundary.position.y
+                            }
+                        }
+                    }))
+                    {
+                        moving = false
+                        break
+                    }
+                }
+                if (moving)
+                {
+                    movables.forEach(movable => 
+                    {
+                        movable.position.x += 3
+                    })
+                }
+                
+            }
+            else if (keys.d.pressed && lastKey === 'd')
+            {
+                for (let i = 0; i < boundaries.length; i++){
+                    const boundary = boundaries[i]
+                    if (rectangleCollision({
+                        rectangle1:player, 
+                        rectangle2: {
+                            ...boundary,
+                            position: {
+                                x : boundary.position.x - 2,
+                                y: boundary.position.y
+                            }
+                        }
+                    }))
+                    {
+                        moving = false
+                        break
+                    }
+                }
+                if (moving)
+                {
+                    movables.forEach(movable => 
+                    {
+                        movable.position.x -= 3
+                    })
+                }
+                
+            }
+        }
+
+        animate();
+
+        lastKey = ''
+        window.addEventListener('keydown', (e) =>{
+            
+            switch (e.key){
+                case 'w':
+                    keys.w.pressed = true
+                    lastKey = 'w'
+                    break
+                case 'a':
+                    keys.a.pressed = true
+                    lastKey = 'a'
+                    break
+                case 's':
+                    keys.s.pressed = true
+                    lastKey = 's'
+                    break
+                case 'd':
+                    keys.d.pressed = true
+                    lastKey = 'd'
+                    break
+            }
+        })
+        window.addEventListener('keyup', (e) =>{
+            
+            switch (e.key){
+                case 'w':
+                    keys.w.pressed = false
+                    break
+                case 'a':
+                    keys.a.pressed = false
+                    break
+                case 's':
+                    keys.s.pressed = false
+                    break
+                case 'd':
+                    keys.d.pressed = false
+                    break
+            }
+        })
+    </script>   
+</body>
+</html>

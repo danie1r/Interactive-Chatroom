@@ -1,0 +1,40 @@
+.msg-output{
+    height: 80vh;
+    border: 1px solid lightgray;
+    overflow-y:scroll;
+
+}
+
+.message-inner{
+    margin-left:20px;
+    margin-bottom:10px;
+    padding: 10px;
+    display: inline-block;
+    min-width:200px;
+    max-width: 90%;
+    border-radius: 10px;
+    background-color: aquamarine;
+}
+
+.message-sender{
+    font-weight: bold;
+    font-size: 15px;
+}
+
+.message-content{
+    font: size 15px;
+}
+
+.message-timestamp{
+    font: size 15px;
+}
+
+.incoming-message .message-inner{
+    background-color:chartreuse;
+}
+
+.incoming-message{
+    display:flex;
+    justify-content: flex-end;
+    margin-right:20px;
+}
