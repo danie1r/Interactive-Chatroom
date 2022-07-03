@@ -2,7 +2,7 @@
 Daniel Ryu (danie1r)
 Eric Tabuchi (ETabuchi)
 
-Improved aesthetics / added visuals to make application look prettier
+Improved aesthetics / added visuals to make application look prettier\n
 Users can log out
 Socket.IO
 Learned React Bootstrap to contain elements in rows and columns within a page
